@@ -1,0 +1,90 @@
+# Load Required Libraries
+library(dplyr)
+library(ggplot2)
+
+# 1. Load Data and Scatter Plot of GDP Growth vs. Debt Ratio
+# Load the debt data from CSV file
+debt <- read.csv("debt.csv")
+colnames(debt)  # Check column names of the data
+
+# Create a scatter plot of GDP growth against Debt Ratio
+ggplot(debt, aes(x = ratio, y = growth)) +
+  geom_point() +
+  xlab("Debt Ratio") +
+  ylab("GDP Growth Rate") +
+  ggtitle("Scatter Plot of GDP Growth Rate vs. Debt Ratio")
+
+# 2. Compute Mean Growth Rate and Debt Ratio by Year
+# Calculate mean growth rate and mean debt ratio for each year
+year_mean <- debt %>%
+  group_by(Year) %>%
+  summarise(mean_growth = mean(growth, na.rm = TRUE),
+            mean_debt = mean(ratio, na.rm = TRUE))
+
+# Create a scatter plot of mean GDP growth rate against mean debt ratio
+ggplot(year_mean, aes(x = mean_debt, y = mean_growth)) +
+  geom_point() +
+  xlab("Mean Debt Ratio") +
+  ylab("Mean GDP Growth Rate") +
+  ggtitle("Mean GDP Growth Rate vs. Mean Debt Ratio by Year")
+
+# 3. Fit Linear Model: GDP Growth Rate vs. Debt Ratio
+# Fit a linear regression model of GDP growth rate on debt ratio
+model <- lm(growth ~ ratio, data = debt)
+
+# Create a scatter plot with the fitted regression line
+ggplot(debt, aes(x = ratio, y = growth)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  xlab("Debt Ratio") +
+  ylab("GDP Growth Rate") +
+  ggtitle("Linear Regression: GDP Growth Rate vs. Debt Ratio")
+
+# Display the model summary
+summary(model)
+
+# 4. Filter Data for France and Add Next Year's Growth Rate
+# Filter the debt data to include only rows for France
+F.debt <- filter(debt, Country == "France")
+
+# Add a new column for the next year's growth rate using lead() function
+F.debt <- F.debt %>%
+  mutate(next_growth = lead(growth))
+
+# Print the rows corresponding to Years 1971, 1972, 1990, and 2009 for France
+filter(F.debt, Year %in% c(1971, 1972, 1990, 2009))
+
+# 5. Add Next Year's Growth Rate for All Countries
+# Add the next year's growth rate to the entire debt data frame
+debt <- debt %>%
+  group_by(Country) %>%
+  mutate(next_growth = lead(growth))
+
+# Print the rows for Austria (2006) and UK (1990) with the added next growth
+filter(debt, (Country == "Austria" & Year == 2006) | (Country == "UK" & Year == 1990))
+
+# 6. Fit Linear Model: Next Year's GDP Growth vs. Debt Ratio
+# Fit a linear regression model for next year's GDP growth rate on debt ratio
+next_year <- lm(next_growth ~ ratio, data = debt)
+
+# Create a scatter plot of next year's GDP growth against the debt ratio with regression line
+ggplot(debt, aes(x = ratio, y = next_growth)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  xlab("Debt Ratio") +
+  ylab("Next Year's GDP Growth") +
+  ggtitle("Linear Regression: Next Year's GDP Growth vs. Debt Ratio")
+
+# Display the model summary for next year's growth
+summary(next_year)
+
+# 7. Add Delta Growth and Fit Linear Model for Change in GDP Growth
+# Add a new column for the change in GDP growth rate (delta.growth)
+debt <- debt %>%
+  mutate(delta_growth = next_growth - growth)
+
+# Fit a linear regression model for change in GDP growth based on current growth and debt ratio
+delta_growth <- lm(delta_growth ~ growth + ratio, data = debt)
+
+# Display the model summary for the delta growth
+summary(delta_growth)
